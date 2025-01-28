@@ -59,6 +59,7 @@ mongoose
 
         // Middleware
         app.use(cors());
+        app.set('trust proxy', 1);
 
         // Use `express.json()` only for requests that expect a JSON body
         app.use((req, res, next) => {
