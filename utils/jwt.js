@@ -1,4 +1,4 @@
-// utils/jwt.js
+//auth-service/utils/jwt.js
 import jwt from "jsonwebtoken";
 
 export const verifyToken = (token, email, purpose) => {

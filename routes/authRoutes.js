@@ -1,11 +1,11 @@
 
-// routes/authRoute.js
+//auth-service/routes/authRoute.js
 import express from "express";
 import { signupLimiter } from "../middlewares/rateLimiter.js";
 import { signup, verifyOTP, login, resendOTP, getUserAnalytics } from "../controllers/authController.js";
 import { signupValidation } from "../middlewares/signupValidation.js";
 import { authenticateJWT } from "../middlewares/auth.js";
-import { jwtDecode } from "../middlewares/jwtDecode.js";
+import { verifyUserId } from "../middlewares/verifyUser.js";
 
 const router = express.Router();
 
@@ -28,7 +28,7 @@ router.get("/user-analytics", authenticateJWT, (req, res) => {
 
     res.status(200).json(analytics);
 });
-router.get("/protected-route", authenticateJWT, jwtDecode, (req, res) => {
+router.get("/protected-route", authenticateJWT, verifyUserId, (req, res) => {
     res.status(200).json({
         message: "Access granted",
         user: req.user,
