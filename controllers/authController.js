@@ -125,6 +125,10 @@ export const resendOTP = async (req, res) => {
 
 
 
+
+
+
+// Login controller 
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -145,8 +149,9 @@ export const login = async (req, res) => {
       return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid credentials" });
     }
 
-    // Update the last login time
+    // Update the last login time and login count
     user.lastLogin = new Date();
+    user.loginCount = (user.loginCount || 0) + 1; // Increment login count
     await user.save();
 
     // Generate the JWT token
@@ -174,6 +179,7 @@ export const login = async (req, res) => {
   }
 };
 
+// Enhanced User Analytics
 export const getUserAnalytics = async (req, res) => {
   try {
     const now = new Date();
@@ -189,19 +195,25 @@ export const getUserAnalytics = async (req, res) => {
     const weeklyNewUsers = await User.countDocuments({ createdAt: { $gte: oneWeekAgo } });
     const monthlyNewUsers = await User.countDocuments({ createdAt: { $gte: oneMonthAgo } });
 
-    // Active users
-    const dailyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneDayAgo } });
-    const weeklyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
-    const monthlyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
+    // Login analytics
+    const dailyLogins = await User.countDocuments({ lastLogin: { $gte: oneDayAgo } });
+    const weeklyLogins = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
+    const monthlyLogins = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
+
+    // Total logins
+    const totalLogins = await User.aggregate([
+      { $group: { _id: null, total: { $sum: "$loginCount" } } },
+    ]);
 
     res.status(200).json({
       totalUsers,
       dailyNewUsers,
       weeklyNewUsers,
       monthlyNewUsers,
-      dailyActiveUsers,
-      weeklyActiveUsers,
-      monthlyActiveUsers,
+      dailyLogins,
+      weeklyLogins,
+      monthlyLogins,
+      totalLogins: totalLogins[0]?.total || 0, // Handle case where no users exist
     });
   } catch (error) {
     res

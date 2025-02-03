@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
     otpExpiry: Date,
     createdAt: { type: Date, default: Date.now },
     lastLogin: { type: Date, default: null, index: true },
+    loginCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 )
