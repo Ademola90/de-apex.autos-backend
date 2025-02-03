@@ -1,4 +1,4 @@
-// auth-service/models/User.js
+// models/User.js
 
 import mongoose from "mongoose"
 

@@ -1,4 +1,4 @@
-// auth-service/utils/email.js
+// utils/email.js
 import nodemailer from "nodemailer";
 
 export const sendOTPEmail = async (email, otp) => {

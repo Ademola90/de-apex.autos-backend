@@ -1,4 +1,4 @@
-// auth-service/models/Token.js
+// models/Token.js
 import mongoose from "mongoose";
 
 

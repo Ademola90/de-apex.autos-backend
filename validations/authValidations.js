@@ -1,4 +1,4 @@
-//auth-service/validation/authValidations.js
+// validation/authValidations.js
 import { body } from "express-validator";
 
 export const signupValidation = [

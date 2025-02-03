@@ -1,6 +1,4 @@
-//auth-service/middlewares/rateLimiter.js
-// import rateLimit from "express-rate-limit";
-
+// middlewares/rateLimiter.js
 import rateLimit from "express-rate-limit";
 
 export const signupLimiter = rateLimit({

@@ -1,5 +1,5 @@
 
-//auth-service/routes/authRoute.js
+// routes/authRoute.js
 import express from "express";
 import { signupLimiter } from "../middlewares/rateLimiter.js";
 import { signup, verifyOTP, login, resendOTP, getUserAnalytics } from "../controllers/authController.js";

@@ -1,3 +1,4 @@
+//middlewares/verifyUser
 import User from "../models/User.js"
 
 export const verifyUserId = async (req, res, next) => {
