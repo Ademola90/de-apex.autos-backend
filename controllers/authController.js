@@ -1,4 +1,4 @@
-// controllers/authController.js
+// auth-service/controllers/authController.js
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import { validationResult } from "express-validator";
@@ -11,7 +11,10 @@ import { verifyToken } from "../utils/token.js";
 
 
 export const signup = async (req, res) => {
-
+  // const errors = validationResult(req);
+  // if (!errors.isEmpty()) {
+  //     return res.status(StatusCodes.BAD_REQUEST).json({ errors: errors.array() });
+  // }
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -123,12 +126,42 @@ export const resendOTP = async (req, res) => {
 };
 
 
+// export const login = async (req, res) => {
+//     const { email, password } = req.body
 
+//     try {
+//       const user = await User.findOne({ email })
+//       if (!user) {
+//         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" })
+//       }
 
+//       if (!user.emailVerified) {
+//         return res.status(StatusCodes.UNAUTHORIZED).json({
+//           message: "Please verify your email before logging in.",
+//         })
+//       }
 
+//       const isPasswordMatch = await bcrypt.compare(password, user.password)
+//       if (!isPasswordMatch) {
+//         return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid credentials" })
+//       }
 
+//       // Update last login
+//       user.lastLogin = new Date()
+//       await user.save()
 
-// Login controller 
+//       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" })
+
+//       res.status(StatusCodes.OK).json({
+//         message: "Login successful",
+//         token,
+//         user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName },
+//       })
+//     } catch (error) {
+//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Login failed", error: error.message })
+//     }
+//   }
+
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -149,9 +182,8 @@ export const login = async (req, res) => {
       return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid credentials" });
     }
 
-    // Update the last login time and login count
+    // Update the last login time
     user.lastLogin = new Date();
-    user.loginCount = (user.loginCount || 0) + 1; // Increment login count
     await user.save();
 
     // Generate the JWT token
@@ -179,7 +211,6 @@ export const login = async (req, res) => {
   }
 };
 
-// Enhanced User Analytics
 export const getUserAnalytics = async (req, res) => {
   try {
     const now = new Date();
@@ -195,25 +226,19 @@ export const getUserAnalytics = async (req, res) => {
     const weeklyNewUsers = await User.countDocuments({ createdAt: { $gte: oneWeekAgo } });
     const monthlyNewUsers = await User.countDocuments({ createdAt: { $gte: oneMonthAgo } });
 
-    // Login analytics
-    const dailyLogins = await User.countDocuments({ lastLogin: { $gte: oneDayAgo } });
-    const weeklyLogins = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
-    const monthlyLogins = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
-
-    // Total logins
-    const totalLogins = await User.aggregate([
-      { $group: { _id: null, total: { $sum: "$loginCount" } } },
-    ]);
+    // Active users
+    const dailyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneDayAgo } });
+    const weeklyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
+    const monthlyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
 
     res.status(200).json({
       totalUsers,
       dailyNewUsers,
       weeklyNewUsers,
       monthlyNewUsers,
-      dailyLogins,
-      weeklyLogins,
-      monthlyLogins,
-      totalLogins: totalLogins[0]?.total || 0, // Handle case where no users exist
+      dailyActiveUsers,
+      weeklyActiveUsers,
+      monthlyActiveUsers,
     });
   } catch (error) {
     res
