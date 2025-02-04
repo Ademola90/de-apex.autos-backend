@@ -2,10 +2,11 @@
 //auth-service/routes/authRoute.js
 import express from "express";
 import { signupLimiter } from "../middlewares/rateLimiter.js";
-import { signup, verifyOTP, login, resendOTP, getUserAnalytics } from "../controllers/authController.js";
+import { signup, verifyOTP, login, resendOTP, getLoginAnalysis } from "../controllers/authController.js";
 import { signupValidation } from "../middlewares/signupValidation.js";
 import { authenticateJWT } from "../middlewares/auth.js";
 import { verifyUserId } from "../middlewares/verifyUser.js";
+import { getUserStats } from "../controllers/userStatsController.js";
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ router.post("/signup", signupLimiter, signupValidation, signup);
 router.post("/verify-otp", verifyOTP);
 router.post("/resend-otp", resendOTP);
 router.post("/login", login);
+router.get("/login-analysis", getLoginAnalysis);
 router.get("/user-analytics", authenticateJWT, (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ message: "Request body is empty or invalid" });

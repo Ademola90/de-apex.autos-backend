@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import { sendOTPEmail } from "../utils/email.js";
 import { createToken } from "../utils/token.js";
 import { verifyToken } from "../utils/token.js";
+import moment from "moment";
 
 
 export const signup = async (req, res) => {
@@ -211,41 +212,87 @@ export const login = async (req, res) => {
   }
 };
 
-export const getUserAnalytics = async (req, res) => {
+export const getLoginAnalysis = async (req, res) => {
   try {
-    const now = new Date();
-    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
-    const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-    const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+    // Get the current date and the date for 10 days ago
+    const today = moment().endOf("day").toDate(); // Today at 23:59:59
+    const tenDaysAgo = moment().subtract(10, "days").startOf("day").toDate(); // 10 days ago at 00:00
 
-    // Total users
-    const totalUsers = await User.countDocuments();
+    // Aggregate to get login counts by day
+    const result = await User.aggregate([
+      {
+        $match: {
+          lastLogin: { $gte: tenDaysAgo, $lte: today }, // Filter records in the last 10 days
+        },
+      },
+      {
+        $project: {
+          day: { $dateToString: { format: "%Y-%m-%d", date: "$lastLogin" } }, // Extract day part (YYYY-MM-DD)
+        },
+      },
+      {
+        $group: {
+          _id: "$day", // Group by the formatted day
+          loginCount: { $sum: 1 }, // Count number of logins per day
+        },
+      },
+      {
+        $sort: { _id: 1 }, // Sort by date ascending
+      },
+    ]);
 
-    // New users
-    const dailyNewUsers = await User.countDocuments({ createdAt: { $gte: oneDayAgo } });
-    const weeklyNewUsers = await User.countDocuments({ createdAt: { $gte: oneWeekAgo } });
-    const monthlyNewUsers = await User.countDocuments({ createdAt: { $gte: oneMonthAgo } });
+    // Fill in missing days (e.g., if no logins for a day) with 0 logins
+    const analysis = [];
+    for (let i = 9; i >= 0; i--) {
+      const day = moment().subtract(i, "days").format("YYYY-MM-DD");
+      const dayData = result.find((r) => r._id === day);
+      analysis.push({
+        day,
+        users: dayData ? dayData.loginCount : 0, // 0 if no users logged in on that day
+      });
+    }
 
-    // Active users
-    const dailyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneDayAgo } });
-    const weeklyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
-    const monthlyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
-
-    res.status(200).json({
-      totalUsers,
-      dailyNewUsers,
-      weeklyNewUsers,
-      monthlyNewUsers,
-      dailyActiveUsers,
-      weeklyActiveUsers,
-      monthlyActiveUsers,
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching analytics data", error: error.message });
+    return res.status(200).json({ analysis });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };
+
+// export const getUserAnalytics = async (req, res) => {
+//   try {
+//     const now = new Date();
+//     const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+//     const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+//     const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+//     // Total users
+//     const totalUsers = await User.countDocuments();
+
+//     // New users
+//     const dailyNewUsers = await User.countDocuments({ createdAt: { $gte: oneDayAgo } });
+//     const weeklyNewUsers = await User.countDocuments({ createdAt: { $gte: oneWeekAgo } });
+//     const monthlyNewUsers = await User.countDocuments({ createdAt: { $gte: oneMonthAgo } });
+
+//     // Active users
+//     const dailyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneDayAgo } });
+//     const weeklyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
+//     const monthlyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
+
+//     res.status(200).json({
+//       totalUsers,
+//       dailyNewUsers,
+//       weeklyNewUsers,
+//       monthlyNewUsers,
+//       dailyActiveUsers,
+//       weeklyActiveUsers,
+//       monthlyActiveUsers,
+//     });
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .json({ message: "Error fetching analytics data", error: error.message });
+//   }
+// };
 
 
 
