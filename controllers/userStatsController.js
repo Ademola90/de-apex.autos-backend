@@ -3,6 +3,47 @@
 import User from "../models/User.js";
 import moment from "moment"; // for date manipulation
 
+
+// Function to fetch user analytics
+export const getUserAnalytics = async (req, res) => {
+    try {
+        // Define time ranges
+        const todayStart = moment().startOf("day").toDate();
+        const todayEnd = moment().endOf("day").toDate();
+        const weekStart = moment().startOf("week").toDate();
+        const weekEnd = moment().endOf("week").toDate();
+        const monthStart = moment().startOf("month").toDate();
+        const monthEnd = moment().endOf("month").toDate();
+        const activeSince = moment().subtract(30, "days").toDate();
+
+        // Perform database queries
+        const totalUsers = await User.countDocuments();
+        const dailyUsers = await User.countDocuments({
+            createdAt: { $gte: todayStart, $lte: todayEnd },
+        });
+        const weeklyUsers = await User.countDocuments({
+            createdAt: { $gte: weekStart, $lte: weekEnd },
+        });
+        const monthlyUsers = await User.countDocuments({
+            createdAt: { $gte: monthStart, $lte: monthEnd },
+        });
+        const activeUsers = await User.countDocuments({
+            lastLogin: { $gte: activeSince },
+        });
+
+        // Combine all analytics into one response
+        return res.status(200).json({
+            totalUsers,
+            dailyUsers,
+            weeklyUsers,
+            monthlyUsers,
+            activeUsers,
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
 export const getUserStats = async (req, res) => {
     try {
         // Define the time range for active users (e.g., past 30 days)

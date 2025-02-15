@@ -1,4 +1,4 @@
-// auth-service/controllers/authController.js
+//controllers/authController.js
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import { validationResult } from "express-validator";
@@ -9,6 +9,7 @@ import { sendOTPEmail } from "../utils/email.js";
 import { createToken } from "../utils/token.js";
 import { verifyToken } from "../utils/token.js";
 import moment from "moment";
+
 
 
 export const signup = async (req, res) => {
@@ -127,73 +128,55 @@ export const resendOTP = async (req, res) => {
 };
 
 
-// export const login = async (req, res) => {
-//     const { email, password } = req.body
-
-//     try {
-//       const user = await User.findOne({ email })
-//       if (!user) {
-//         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" })
-//       }
-
-//       if (!user.emailVerified) {
-//         return res.status(StatusCodes.UNAUTHORIZED).json({
-//           message: "Please verify your email before logging in.",
-//         })
-//       }
-
-//       const isPasswordMatch = await bcrypt.compare(password, user.password)
-//       if (!isPasswordMatch) {
-//         return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid credentials" })
-//       }
-
-//       // Update last login
-//       user.lastLogin = new Date()
-//       await user.save()
-
-//       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" })
-
-//       res.status(StatusCodes.OK).json({
-//         message: "Login successful",
-//         token,
-//         user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName },
-//       })
-//     } catch (error) {
-//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Login failed", error: error.message })
-//     }
-//   }
-
 export const login = async (req, res) => {
   const { email, password } = req.body;
+  console.log({ password, email })
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
-    }
+    console.log("Login attempt for email:", email);
 
-    if (!user.emailVerified) {
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      console.log(`Login attempt failed: No user found with email ${email}`);
       return res.status(StatusCodes.UNAUTHORIZED).json({
-        message: "Please verify your email before logging in.",
+        message: "Invalid credentials",
       });
     }
 
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) {
-      return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid credentials" });
+    console.log("User found:", user);
+
+    // Compare password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    console.log("Password validation result:", isPasswordValid);
+
+    if (!isPasswordValid) {
+      console.log("Login attempt failed: Invalid password");
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        message: "Invalid credentials",
+      });
     }
 
-    // Update the last login time
-    user.lastLogin = new Date();
-    await user.save();
-
-    // Generate the JWT token
+    // Generate JWT token with role included
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
+    console.log("Generated JWT token:", token);
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Send response with user details including role
     res.status(StatusCodes.OK).json({
       message: "Login successful",
       token,
@@ -202,15 +185,19 @@ export const login = async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        lastLogin: user.lastLogin, // Return the updated last login time
+        role: user.role,
+        lastLogin: user.lastLogin,
       },
     });
   } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ message: "Login failed", error: error.message });
+    console.error("Login error:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: "An error occurred during login",
+      error: error.message,
+    });
   }
 };
+
 
 export const getLoginAnalysis = async (req, res) => {
   try {
@@ -257,156 +244,3 @@ export const getLoginAnalysis = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
-
-// export const getUserAnalytics = async (req, res) => {
-//   try {
-//     const now = new Date();
-//     const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
-//     const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-//     const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
-
-//     // Total users
-//     const totalUsers = await User.countDocuments();
-
-//     // New users
-//     const dailyNewUsers = await User.countDocuments({ createdAt: { $gte: oneDayAgo } });
-//     const weeklyNewUsers = await User.countDocuments({ createdAt: { $gte: oneWeekAgo } });
-//     const monthlyNewUsers = await User.countDocuments({ createdAt: { $gte: oneMonthAgo } });
-
-//     // Active users
-//     const dailyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneDayAgo } });
-//     const weeklyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneWeekAgo } });
-//     const monthlyActiveUsers = await User.countDocuments({ lastLogin: { $gte: oneMonthAgo } });
-
-//     res.status(200).json({
-//       totalUsers,
-//       dailyNewUsers,
-//       weeklyNewUsers,
-//       monthlyNewUsers,
-//       dailyActiveUsers,
-//       weeklyActiveUsers,
-//       monthlyActiveUsers,
-//     });
-//   } catch (error) {
-//     res
-//       .status(500)
-//       .json({ message: "Error fetching analytics data", error: error.message });
-//   }
-// };
-
-
-
-
-
-
-// export const getUserAnalytics = async (req, res) => {
-//   try {
-//     const totalUsers = await User.countDocuments()
-
-//     const now = new Date()
-//     const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000)
-//     const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000)
-//     const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000)
-
-//     const dailyUsers = await User.countDocuments({ createdAt: { $gte: oneDayAgo } })
-//     const weeklyUsers = await User.countDocuments({ createdAt: { $gte: oneWeekAgo } })
-//     const monthlyUsers = await User.countDocuments({ createdAt: { $gte: oneMonthAgo } })
-
-//     res.status(StatusCodes.OK).json({
-//       totalUsers,
-//       dailyUsers,
-//       weeklyUsers,
-//       monthlyUsers,
-//     })
-//   } catch (error) {
-//     res
-//       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-//       .json({ message: "Error fetching user analytics", error: error.message })
-//   }
-// }
-
-
-
-
-
-
-// export const login = async (req, res) => {
-//     const { email, password } = req.body;
-
-//     try {
-//         // Find user by email
-//         const user = await User.findOne({ email });
-//         if (!user) {
-//             return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
-//         }
-
-//         // Check if email is verified
-//         if (!user.emailVerified) {
-//             return res.status(StatusCodes.UNAUTHORIZED).json({
-//                 message: "Please verify your email before logging in.",
-//             });
-//         }
-
-//         // Check password
-//         const isPasswordMatch = await bcrypt.compare(password, user.password);
-//         if (!isPasswordMatch) {
-//             return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid credentials" });
-//         }
-
-//         // Generate JWT
-//         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-
-//         res.status(StatusCodes.OK).json({ message: "Login successful", token });
-//     } catch (error) {
-//         res
-//             .status(StatusCodes.INTERNAL_SERVER_ERROR)
-//             .json({ message: "Login failed", error: error.message });
-//     }
-// };
-
-
-// import bcrypt from "bcrypt";
-// import User from "../models/User.js";
-// import { validationResult } from "express-validator";
-// import { StatusCodes } from "http-status-codes";
-
-// export const signup = async (req, res) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//         return res.status(StatusCodes.BAD_REQUEST).json({ errors: errors.array() });
-//     }
-
-//     const { firstName, lastName, email, password } = req.body;
-
-//     try {
-//         // Check if user already exists
-//         const existingUser = await User.findOne({ email });
-//         if (existingUser) {
-//             return res
-//                 .status(StatusCodes.CONFLICT)
-//                 .json({ message: "User with this email already exists" });
-//         }
-
-//         // Hash password
-//         const hashedPassword = await bcrypt.hash(password, 10);
-
-//         // Create user
-//         const newUser = new User({
-//             firstName,
-//             lastName,
-//             email,
-//             password: hashedPassword,
-//             isVerified: true, // Automatically mark as verified since we removed email verification
-//         });
-
-//         await newUser.save();
-
-//         res.status(StatusCodes.CREATED).json({
-//             message: "Signup successful.",
-//         });
-//     } catch (error) {
-//         res
-//             .status(StatusCodes.INTERNAL_SERVER_ERROR)
-//             .json({ message: "Signup failed", error: error.message });
-//     }
-// };

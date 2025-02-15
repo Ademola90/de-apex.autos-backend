@@ -1,17 +1,52 @@
-//auth-service/utils/jwt.js
-import jwt from "jsonwebtoken";
+// utils/jwt.js
+// import jwt from "jsonwebtoken";
 
-export const verifyToken = (token, email, purpose) => {
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.email !== email || decoded.purpose !== purpose) {
-            return { status: false, message: "Invalid OTP or email mismatch" };
-        }
-        return { status: true, data: decoded };
-    } catch (error) {
-        return { status: false, message: "Invalid or expired OTP" };
-    }
-};
+// export const generateToken = (user) => {
+//     return jwt.sign(
+//         {
+//             id: user._id,
+//             role: user.role,
+//         },
+//         process.env.JWT_SECRET,
+//         { expiresIn: '1d' }
+//     );
+// };
+
+// export const verifyToken = (token) => {
+//     try {
+//         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//         return { status: true, data: decoded };
+//     } catch (error) {
+//         return { status: false, message: "Invalid or expired token" };
+//     }
+// };
+
+
+// //auth-service/utils/jwt.js
+// import jwt from "jsonwebtoken";
+
+// export const generateToken = (user) => {
+//     return jwt.sign(
+//         {
+//             id: user._id,
+//             role: user.role,
+//         },
+//         process.env.JWT_SECRET,
+//         { expiresIn: '1d' }
+//     );
+// };
+
+// export const verifyToken = (token, email, purpose) => {
+//     try {
+//         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//         if (decoded.email !== email || decoded.purpose !== purpose) {
+//             return { status: false, message: "Invalid OTP or email mismatch" };
+//         }
+//         return { status: true, data: decoded };
+//     } catch (error) {
+//         return { status: false, message: "Invalid or expired OTP" };
+//     }
+// };
 
 
 // import jwt from "jsonwebtoken";

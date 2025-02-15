@@ -1,90 +1,104 @@
-// import jwt from "jsonwebtoken";
+// ../middlewares/auth.js
 
-// export const authenticateJWT = (req, res, next) => {
-//   // Extract token from the 'Authorization' header
-//   const authHeader = req.headers.authorization;
-
-//   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-//     return res.status(401).json({ message: "Access token is required" });
-//   }
-
-//   const token = authHeader.split(" ")[1]; // Extract the token part
-
-//   try {
-//     // Verify the token
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-//     // Optionally attach user ID to the request object if present in the token payload
-//     req.userId = decoded.id || null; // Attach `id` if exists
-//     req.user = decoded; // Attach full decoded token payload
-
-//     next(); // Proceed to the next middleware or route handler
-//   } catch (error) {
-//     return res.status(403).json({ message: "Invalid or expired token" });
-//   }
-// };
+// middlewares/auth.js
 import jwt from "jsonwebtoken";
+import { StatusCodes } from "http-status-codes";
 
-// Generate a JWT with custom claims and expiration
-export const generateToken = (payload, expiresIn = "1h") => {
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
-};
-
-// Verify a token for specific claims (e.g., email, purpose)
-export const verifyToken = (token, email, purpose) => {
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Validate additional claims
-    if (decoded.email !== email || decoded.purpose !== purpose) {
-      return { status: false, message: "Invalid OTP or email mismatch" };
-    }
-
-    return { status: true, data: decoded };
-  } catch (error) {
-    return { status: false, message: "Invalid or expired OTP" };
-  }
-};
-
+// Middleware to authenticate JWT
 export const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    console.log("No token provided or incorrect format");
-    return res.status(401).json({ message: "No token provided" });
+    return res
+      .status(StatusCodes.UNAUTHORIZED)
+      .json({ message: "Authentication token missing or incorrect format" });
   }
 
-  const token = authHeader.split(" ")[1]; // Extract token from Bearer
-  console.log("Token Received:", token);
+  const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Verify token
-    console.log("Decoded Token:", decoded);
-    req.user = decoded; // Attach decoded payload to the request
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
   } catch (err) {
-    console.log("Error verifying token:", err.message); // Log error
-    res.status(401).json({ message: "Token is invalid" });
+    if (err.name === "TokenExpiredError") {
+      return res
+        .status(StatusCodes.UNAUTHORIZED)
+        .json({ message: "Token expired" });
+    }
+    return res
+      .status(StatusCodes.UNAUTHORIZED)
+      .json({ message: "Invalid token" });
+  }
+};
+
+// Endpoint to refresh access token
+export const refreshAccessToken = (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ message: "Refresh token is required" });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    const newAccessToken = jwt.sign(
+      { id: decoded.id, role: decoded.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    res.status(StatusCodes.OK).json({ accessToken: newAccessToken });
+  } catch (err) {
+    res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid refresh token" });
   }
 };
 
 
 
 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// import jwt from "jsonwebtoken";
+// import { StatusCodes } from "http-status-codes"
+
+// export const isSuperAdmin = (req, res, next) => {
+//   if (req.user && req.user.role === "superadmin") {
+//     next(); // Allow access if the user is a super admin
+//   } else {
+//     res.status(403).json({ message: "Access denied. Only super admins are allowed." });
+//   }
+// };
+
 // export const authenticateJWT = (req, res, next) => {
-//   const authHeader = req.headers.authorization;
+//   const authHeader = req.headers.authorization
+
 //   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-//     return res.status(401).json({ message: "Authorization token missing or invalid" });
+//     console.log("No token provided or incorrect format")
+//     return res.status(StatusCodes.UNAUTHORIZED).json({ message: "No token provided or incorrect format" })
 //   }
 
-//   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-//     if (err) {
-//       return res.status(403).json({ message: "Token is invalid" });
+//   const token = authHeader.split(" ")[1]
+
+//   try {
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+//     req.user = decoded
+//     next()
+//   } catch (err) {
+//     console.log("Error verifying token:", err.message)
+//     if (err.name === "TokenExpiredError") {
+//       return res.status(StatusCodes.UNAUTHORIZED).json({ message: "Token has expired" })
 //     }
-//     req.user = user;
-//     next();
-//   });
-// };
+//     res.status(StatusCodes.UNAUTHORIZED).json({ message: "Token is invalid" })
+//   }
+// }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 
