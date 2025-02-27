@@ -7,7 +7,9 @@ import dotenv from "dotenv";
 import userRoutes from "./routes/userRoutes.js";
 import superAdminRoutes from './routes/superadmin.route.js';
 import carManagementRoutes from "./routes/carManagement.route.js";
+import accessoryManagementRoutes from "./routes/accessoryManagement.route.js";
 import path from "path"; // Import path module
+import googleRoutes from "./routes/googleRoutes.js";
 
 dotenv.config();
 
@@ -19,6 +21,14 @@ if (!process.env.MONGO_URI) {
     process.exit(1); // Exit if MONGO_URI is missing
 }
 
+// CORS Configuration
+const corsOptions = {
+    origin: "http://localhost:3000", // Frontend URL
+    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed HTTP methods
+};
+app.use(cors(corsOptions));
+
 // Connect to MongoDB
 mongoose
     .connect(process.env.MONGO_URI)
@@ -26,19 +36,18 @@ mongoose
         console.log("Auth Service Connected to MongoDB");
 
         // Middleware
-        app.use(cors());
+        app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+
+        // Add COOP and COEP headers globally
+        app.use((req, res, next) => {
+            res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+            res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+            next();
+        });
 
         // Trust the reverse proxy (e.g., Render)
         app.set('trust proxy', 1);
-
-        // Use `express.json()` only for requests that expect a JSON body
-        app.use((req, res, next) => {
-            if (["POST", "PUT", "PATCH"].includes(req.method)) {
-                express.json()(req, res, next);
-            } else {
-                next();
-            }
-        });
+        app.use(express.json());
 
         // Serve static files from the 'uploads' directory
         app.use("/uploads", express.static(path.join(path.resolve(), "uploads")));
@@ -48,6 +57,9 @@ mongoose
         app.use("/api/users", userRoutes);
         app.use('/api/super-admin', superAdminRoutes);
         app.use('/api/car', carManagementRoutes);
+        app.use('/api/accessory', accessoryManagementRoutes);
+
+
 
         // Start Server
         const PORT = process.env.AUTH_SERVICE_PORT || 5000;

@@ -134,6 +134,46 @@ export const updateCar = async (req, res) => {
 };
 
 
+
+export const getCategorizedCars = async (req, res) => {
+    try {
+        const cars = await Car.find();
+
+        // Group cars by Make
+        const carsByMake = cars.reduce((acc, car) => {
+            if (!acc[car.make]) {
+                acc[car.make] = [];
+            }
+            acc[car.make].push(car);
+            return acc;
+        }, {});
+
+        // Group cars by Type
+        const carsByType = cars.reduce((acc, car) => {
+            if (!acc[car.type]) {
+                acc[car.type] = [];
+            }
+            acc[car.type].push(car);
+            return acc;
+        }, {});
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            carsByMake,
+            carsByType,
+        });
+    } catch (error) {
+        console.error("Error fetching categorized cars:", error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: "Error fetching categorized cars",
+            error: error.message,
+        });
+    }
+};
+
+
+
 // export const updateCar = async (req, res) => {
 //     try {
 //         const { id } = req.params;

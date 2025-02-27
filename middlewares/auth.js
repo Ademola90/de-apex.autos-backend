@@ -43,19 +43,46 @@ export const refreshAccessToken = (req, res) => {
   }
 
   try {
+    // Verify the refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
+    // Generate a new access token
     const newAccessToken = jwt.sign(
       { id: decoded.id, role: decoded.role },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "15m" } // Set the expiration time for the new access token
     );
 
+    // Return the new access token
     res.status(StatusCodes.OK).json({ accessToken: newAccessToken });
   } catch (err) {
+    console.error("Token refresh failed:", err);
     res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid refresh token" });
   }
 };
+// export const refreshAccessToken = (req, res) => {
+//   const { refreshToken } = req.body;
+
+//   if (!refreshToken) {
+//     return res
+//       .status(StatusCodes.BAD_REQUEST)
+//       .json({ message: "Refresh token is required" });
+//   }
+
+//   try {
+//     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+//     const newAccessToken = jwt.sign(
+//       { id: decoded.id, role: decoded.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "15m" }
+//     );
+
+//     res.status(StatusCodes.OK).json({ accessToken: newAccessToken });
+//   } catch (err) {
+//     res.status(StatusCodes.UNAUTHORIZED).json({ message: "Invalid refresh token" });
+//   }
+// };
 
 
 

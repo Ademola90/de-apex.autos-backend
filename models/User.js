@@ -15,11 +15,15 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      // required: true,
     },
     emailVerified: {
       type: Boolean,
       default: false,
+    },
+    googleId: {
+      type: String,
+      unique: true
     },
     otp: String,
     otpExpiry: Date,

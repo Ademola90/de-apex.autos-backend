@@ -35,7 +35,20 @@ router.post(
     addCar
 );
 
-router.get("/cars", authorizeRoles("admin", "superadmin"), getCars);
+router.get("/cars", getCars);
+
+router.get("/cars/:id", async (req, res) => {
+    try {
+        const car = await Car.findById(req.params.id); // Find car by ID
+        if (!car) {
+            return res.status(404).json({ message: "Car not found" });
+        }
+        res.json(car); // Send the car details
+    } catch (error) {
+        console.error("Error fetching car by ID:", error);
+        res.status(500).json({ message: "Error fetching car", error: error.message });
+    }
+});
 
 router.put(
     "/cars/:id",
@@ -60,32 +73,18 @@ router.delete("/cars/:id", async (req, res) => {
 
 
 router.get("/public-cars", async (req, res) => {
-    const { page = 1, limit = 10, make, model } = req.query;
-
-    // Ensure pagination values are numbers
-    const currentPage = Math.max(1, parseInt(page, 10)) || 1;
-    const itemsPerPage = Math.max(1, parseInt(limit, 10)) || 10;
+    const { make, model } = req.query;
 
     const filter = {};
     if (make) filter.make = new RegExp(make, "i"); // Case-insensitive match
     if (model) filter.model = new RegExp(model, "i");
 
     try {
-        const cars = await Car.find(filter)
-            .select("-createdBy")
-            .skip((currentPage - 1) * itemsPerPage)
-            .limit(itemsPerPage);
-
-        const totalCars = await Car.countDocuments(filter);
+        const cars = await Car.find(filter).select("-createdBy"); // Fetch all cars
 
         res.status(200).json({
             success: true,
-            cars,
-            pagination: {
-                total: totalCars,
-                page: currentPage,
-                pages: Math.ceil(totalCars / itemsPerPage),
-            },
+            cars, // Return all cars
         });
     } catch (error) {
         console.error("Error fetching public cars:", error);

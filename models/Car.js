@@ -12,7 +12,7 @@ const carSchema = new mongoose.Schema({
     },
     year: {
         type: Number,
-        required: true
+        // required: true
     },
     type: {
         type: String,
