@@ -323,72 +323,131 @@ export const getLoginAnalysis = async (req, res) => {
 
 
 
-
-
 export const googleAuth = async (req, res) => {
   const { token } = req.body;
 
   try {
-    // Verify Google token
+    // Verify the Google token
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID, // Matches your Google Client ID
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
-
     const payload = ticket.getPayload();
 
-    // Check if the user already exists
+    // Find or create user
     let user = await User.findOne({ email: payload.email });
-
     if (!user) {
-      // Create new user if not found
       user = new User({
         name: payload.name,
         email: payload.email,
         googleId: payload.sub,
         avatar: payload.picture,
-        role: "user", // Default role
+        role: 'user',
       });
-
       await user.save();
     }
 
-    // Generate access token
+    // Generate tokens
     const accessToken = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" } // Short-lived access token
+      { expiresIn: '15m' }
     );
-
-    // Generate refresh token
     const refreshToken = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user._id },
       process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "7d" } // Long-lived refresh token
+      { expiresIn: '7d' }
     );
 
     // Update last login
     user.lastLogin = new Date();
     await user.save();
 
-    // Send response with tokens and user details
     res.status(200).json({
-      message: "Login successful",
-      token: accessToken, // Access token
-      refreshToken, // Refresh token
+      message: 'Login successful',
+      token: accessToken,
+      refreshToken,
       user: {
         id: user._id,
-        email: user.email,
         name: user.name,
+        email: user.email,
         role: user.role,
         lastLogin: user.lastLogin,
       },
     });
   } catch (error) {
-    console.error("Error verifying Google token:", error.message);
-    res.status(500).json({ error: "Failed to verify Google token" });
+    console.error('Google authentication error:', error.message);
+    res.status(500).json({ error: 'Failed to authenticate' });
   }
 };
+
+
+
+
+// export const googleAuth = async (req, res) => {
+//   const { token } = req.body;
+
+//   try {
+//     // Verify Google token
+//     const ticket = await client.verifyIdToken({
+//       idToken: token,
+//       audience: process.env.GOOGLE_CLIENT_ID, // Matches your Google Client ID
+//     });
+
+//     const payload = ticket.getPayload();
+
+//     // Check if the user already exists
+//     let user = await User.findOne({ email: payload.email });
+
+//     if (!user) {
+//       // Create new user if not found
+//       user = new User({
+//         name: payload.name,
+//         email: payload.email,
+//         googleId: payload.sub,
+//         avatar: payload.picture,
+//         role: "user", // Default role
+//       });
+
+//       await user.save();
+//     }
+
+//     // Generate access token
+//     const accessToken = jwt.sign(
+//       { userId: user._id, email: user.email, role: user.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "15m" } // Short-lived access token
+//     );
+
+//     // Generate refresh token
+//     const refreshToken = jwt.sign(
+//       { userId: user._id, email: user.email },
+//       process.env.JWT_REFRESH_SECRET,
+//       { expiresIn: "7d" } // Long-lived refresh token
+//     );
+
+//     // Update last login
+//     user.lastLogin = new Date();
+//     await user.save();
+
+//     // Send response with tokens and user details
+//     res.status(200).json({
+//       message: "Login successful",
+//       token: accessToken, // Access token
+//       refreshToken, // Refresh token
+//       user: {
+//         id: user._id,
+//         email: user.email,
+//         name: user.name,
+//         role: user.role,
+//         lastLogin: user.lastLogin,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error verifying Google token:", error.message);
+//     res.status(500).json({ error: "Failed to verify Google token" });
+//   }
+// };
 
 
 export const googleLogin = async (req, res) => {
