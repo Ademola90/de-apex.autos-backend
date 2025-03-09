@@ -29,7 +29,7 @@ const allowLocalhost = (origin, callback) => {
     const isLocalhost = origin.startsWith("http://localhost:");
 
     // Allow your production frontend
-    const isProductionFrontend = origin === 'https://your-production-frontend.com';
+    const isProductionFrontend = origin === 'https://de-apex-autos-backend.onrender.com/api';
 
     if (isLocalhost || isProductionFrontend) {
         return callback(null, true); // Allow the request
