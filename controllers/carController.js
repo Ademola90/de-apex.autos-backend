@@ -11,9 +11,8 @@ export const addCar = async (req, res) => {
             return res.status(StatusCodes.BAD_REQUEST).json({ message: "All fields are required" });
         }
 
-        // Validate files and create URLs
-        const baseUrl = `${req.protocol}://${req.get("host")}`;
-        const images = req.files?.map((file) => `${baseUrl}/uploads/${file.filename}`) || [];
+        // Store relative paths for images
+        const images = req.files?.map((file) => `/uploads/${file.filename}`) || [];
 
         if (images.length === 0) {
             return res.status(StatusCodes.BAD_REQUEST).json({ message: "At least one image is required" });
@@ -44,6 +43,47 @@ export const addCar = async (req, res) => {
         });
     }
 };
+// export const addCar = async (req, res) => {
+//     try {
+//         const { make, model, year, type, price, description } = req.body;
+
+//         if (!make || !model || !year || !type || !price || !description) {
+//             return res.status(StatusCodes.BAD_REQUEST).json({ message: "All fields are required" });
+//         }
+
+//         // Validate files and create URLs
+//         const baseUrl = `${req.protocol}://${req.get("host")}`;
+//         const images = req.files?.map((file) => `${baseUrl}/uploads/${file.filename}`) || [];
+
+//         if (images.length === 0) {
+//             return res.status(StatusCodes.BAD_REQUEST).json({ message: "At least one image is required" });
+//         }
+
+//         const newCar = new Car({
+//             make,
+//             model,
+//             year,
+//             type,
+//             price,
+//             description,
+//             images,
+//             createdBy: req.user.userId,
+//         });
+
+//         await newCar.save();
+
+//         res.status(StatusCodes.CREATED).json({
+//             message: "Car added successfully",
+//             car: newCar,
+//         });
+//     } catch (error) {
+//         console.error("Error adding car:", error);
+//         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//             message: "Error adding car",
+//             error: error.message,
+//         });
+//     }
+// };
 
 // Get all cars
 export const getCars = async (req, res) => {
