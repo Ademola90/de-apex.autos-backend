@@ -174,44 +174,7 @@ export const getCategorizedCars = async (req, res) => {
 
 
 
-// export const updateCar = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-//         const { make, model, year, type, price, description } = req.body;
 
-//         const car = await Car.findById(id);
-//         if (!car) {
-//             return res.status(StatusCodes.NOT_FOUND).json({ message: "Car not found" });
-//         }
-
-//         // Combine new uploads with existing images
-//         const baseUrl = `${req.protocol}://${req.get("host")}`;
-//         const newImages = req.files?.map((file) => `${baseUrl}/uploads/${file.filename}`) || [];
-//         const updatedImages = [...car.images, ...newImages];
-
-//         // Update the car
-//         car.make = make || car.make;
-//         car.model = model || car.model;
-//         car.year = year || car.year;
-//         car.type = type || car.type;
-//         car.price = price || car.price;
-//         car.description = description || car.description;
-//         car.images = updatedImages;
-
-//         const updatedCar = await car.save();
-
-//         res.status(StatusCodes.OK).json({
-//             message: "Car updated successfully",
-//             car: updatedCar,
-//         });
-//     } catch (error) {
-//         console.error("Error updating car:", error);
-//         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//             message: "Error updating car",
-//             error: error.message,
-//         });
-//     }
-// };
 
 // Delete car by ID
 export const deleteCar = async (req, res) => {
