@@ -21,20 +21,21 @@ if (!process.env.MONGO_URI) {
 }
 
 // Dynamic CORS Origin Check
-const allowLocalhost = (origin, callback) => {
+const allowAnyOrigin = (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    // Check if the origin is from localhost (any port)
-    const isLocalhost = origin.startsWith("http://localhost:");
+    // Define a list of trusted domains or patterns (optional)
+    const trustedDomains = [
+        /\.vercel\.app$/, // Allow any Vercel deployment
+        /\.render\.com$/, // Allow any Render deployment
+        /localhost:\d+$/, // Allow localhost with any port
+    ];
 
-    // Allow your production frontend
-    const isProductionFrontend = origin === 'https://de-apex-autos-backend.onrender.com';
+    // Check if the origin matches any trusted domain pattern
+    const isTrusted = trustedDomains.some((pattern) => pattern.test(origin));
 
-    // Allow your local frontend
-    const isLocalFrontend = origin === 'http://localhost:3000';
-
-    if (isLocalhost || isProductionFrontend || isLocalFrontend) {
+    if (isTrusted) {
         return callback(null, true); // Allow the request
     } else {
         return callback(new Error("Not allowed by CORS")); // Block the request
@@ -43,14 +44,14 @@ const allowLocalhost = (origin, callback) => {
 
 // CORS Configuration
 const corsOptions = {
-    origin: allowLocalhost, // Use the dynamic origin check
+    origin: allowAnyOrigin, // Use the dynamic origin check
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
-    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed HTTP methods
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Include OPTIONS for preflight requests
 };
 app.use(cors(corsOptions));
 
-// Handle preflight requests
-app.options('*', cors(corsOptions));
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions)); // Allow preflight requests for all routes
 
 // Connect to MongoDB
 mongoose
@@ -59,17 +60,6 @@ mongoose
         console.log("Auth Service Connected to MongoDB");
 
         // Middleware
-        app.use(cors(corsOptions));
-
-        // Add COOP and COEP headers globally
-        app.use((req, res, next) => {
-            res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-            res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-            next();
-        });
-
-        // Trust the reverse proxy (e.g., Render)
-        app.set('trust proxy', 1);
         app.use(express.json());
 
         // Serve static files from the 'uploads' directory
@@ -87,10 +77,9 @@ mongoose
         app.listen(PORT, () => console.log(`Auth Service running on port ${PORT}`));
     })
     .catch((err) => {
-        console.error("MongoDB Connection Error:", err.message); // Avoid printing full error stack
+        console.error("MongoDB Connection Error:", err.message);
         process.exit(1);
     });
-
 
 
 
