@@ -5,6 +5,7 @@ import {
     getCars,
     updateCar,
     deleteCar,
+    getCarById,
 } from "../controllers/carController.js";
 import { authorizeRoles } from "../middlewares/role.js";
 import { authenticateJWT } from "../middlewares/auth.js";
@@ -28,28 +29,25 @@ function multerErrorHandler(err, req, res, next) {
     next(err);
 }
 
+
+
+// Add a new car
 router.post(
     "/cars",
     authorizeRoles("admin", "superadmin"),
-    upload.array("images", 10),
+    upload.array("images"),
     addCar
 );
 
+// Get all cars
 router.get("/cars", getCars);
 
-router.get("/cars/:id", async (req, res) => {
-    try {
-        const car = await Car.findById(req.params.id); // Find car by ID
-        if (!car) {
-            return res.status(404).json({ message: "Car not found" });
-        }
-        res.json(car); // Send the car details
-    } catch (error) {
-        console.error("Error fetching car by ID:", error);
-        res.status(500).json({ message: "Error fetching car", error: error.message });
-    }
-});
+// Get car by ID
+router.get("/cars/:id", getCarById);
 
+
+
+// Update car by ID
 router.put(
     "/cars/:id",
     authorizeRoles("admin", "superadmin"),
@@ -57,21 +55,14 @@ router.put(
     updateCar
 );
 
-router.delete("/cars/:id", async (req, res) => {
-    try {
-        const car = await Car.findByIdAndDelete(req.params.id);
-        if (!car) {
-            return res.status(404).json({ message: "Car not found" });
-        }
-        res.json({ message: "Car deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ message: "Error deleting car", error: error.message });
-    }
-});
+
+// Delete car by ID
+router.delete("/cars/:id", authorizeRoles("admin", "superadmin"), deleteCar);
 
 
 
 
+// Get public cars (filtered by make and model)
 router.get("/public-cars", async (req, res) => {
     const { make, model } = req.query;
 
@@ -97,11 +88,36 @@ router.get("/public-cars", async (req, res) => {
 });
 
 
-
-
 router.use(multerErrorHandler);
 
 export default router;
+
+
+
+// router.get("/public-cars", async (req, res) => {
+//     const { make, model } = req.query;
+
+//     const filter = {};
+//     if (make) filter.make = new RegExp(make, "i"); // Case-insensitive match
+//     if (model) filter.model = new RegExp(model, "i");
+
+//     try {
+//         const cars = await Car.find(filter).select("-createdBy"); // Fetch all cars
+
+//         res.status(200).json({
+//             success: true,
+//             cars, // Return all cars
+//         });
+//     } catch (error) {
+//         console.error("Error fetching public cars:", error);
+//         res.status(500).json({
+//             success: false,
+//             message: "Error fetching public cars",
+//             error: error.message,
+//         });
+//     }
+// });
+
 
 
 

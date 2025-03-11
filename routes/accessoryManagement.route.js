@@ -38,6 +38,13 @@ router.post(
     addAccessory
 );
 
+// router.post(
+//     "/accessories",
+//     authorizeRoles("admin", "superadmin"),
+//     upload.array("images", 10),
+//     addAccessory
+// );
+
 // Get all accessories
 router.get("/accessories", getAccessories);
 
@@ -58,6 +65,11 @@ router.put(
     authorizeRoles("admin", "superadmin"),
     updateAccessoryInventory
 );
+// router.put(
+//     "/accessories/:id/inventory",
+//     authorizeRoles("admin", "superadmin"),
+//     updateAccessoryInventory
+// );
 
 
 // Delete accessory by ID

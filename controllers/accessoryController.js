@@ -1,5 +1,18 @@
 import { StatusCodes } from "http-status-codes";
 import Accessory from "../models/accessory.js";
+import cloudinary from "../scripts/cloudinaryConfig.js";
+
+// Helper function to upload images to Cloudinary
+const uploadImageToCloudinary = async (file) => {
+    const result = await cloudinary.uploader.upload(file.path, {
+        folder: "uploads",
+        resource_type: "auto",
+    });
+    return {
+        public_id: result.public_id,
+        secure_url: result.secure_url,
+    };
+};
 
 // Add a new accessory
 export const addAccessory = async (req, res) => {
@@ -10,8 +23,13 @@ export const addAccessory = async (req, res) => {
             return res.status(StatusCodes.BAD_REQUEST).json({ message: "All fields are required" });
         }
 
-        // Store relative paths for images
-        const images = req.files?.map((file) => `/uploads/${file.filename}`) || [];
+        const images = [];
+        if (req.files) {
+            for (const file of req.files) {
+                const image = await uploadImageToCloudinary(file);
+                images.push(image);
+            }
+        }
 
         if (images.length === 0) {
             return res.status(StatusCodes.BAD_REQUEST).json({ message: "At least one image is required" });
@@ -42,6 +60,53 @@ export const addAccessory = async (req, res) => {
         });
     }
 };
+
+// Delete accessory by ID
+export const deleteAccessory = async (req, res) => {
+    try {
+        const accessory = await Accessory.findById(req.params.id);
+        if (!accessory) {
+            return res.status(StatusCodes.NOT_FOUND).json({ message: "Accessory not found" });
+        }
+
+        // Delete images from Cloudinary
+        const imageDeletions = accessory.images.map((image) =>
+            cloudinary.uploader.destroy(image.public_id)
+        );
+        await Promise.all(imageDeletions);
+
+        // Delete the accessory from the database
+        await Accessory.findByIdAndDelete(req.params.id);
+
+        res.status(StatusCodes.OK).json({ message: "Accessory deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting accessory:", error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            message: "Error deleting accessory",
+            error: error.message,
+        });
+    }
+};
+
+
+
+
+
+
+// Get all accessories
+export const getAccessories = async (req, res) => {
+    try {
+        const accessories = await Accessory.find();
+        res.status(StatusCodes.OK).json({ accessories });
+    } catch (error) {
+        console.error("Error retrieving accessories:", error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            message: "Error retrieving accessories",
+            error: error.message,
+        });
+    }
+};
+
 // export const addAccessory = async (req, res) => {
 //     try {
 //         const { name, description, price, category, make, stock } = req.body;
@@ -83,46 +148,26 @@ export const addAccessory = async (req, res) => {
 //         });
 //     }
 // };
-// Get all accessories
-export const getAccessories = async (req, res) => {
-    try {
-        const accessories = await Accessory.find();
-        const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-        const accessoriesWithFullUrls = accessories.map((accessory) => ({
-            ...accessory.toObject(),
-            images: accessory.images.map((image) => (image.startsWith("http") ? image : `${baseUrl}${image}`)),
-        }));
 
-        res.status(StatusCodes.OK).json({
-            success: true, // Add this line
-            accessories: accessoriesWithFullUrls
-        });
-    } catch (error) {
-        console.error("Error retrieving accessories:", error);
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-            success: false, // Add this line
-            message: "Error retrieving accessories",
-            error: error.message,
-        });
-    }
-};
-
-// Backend Controller 
+// Get accessory by ID
 export const getAccessoryById = async (req, res) => {
     try {
         const accessory = await Accessory.findById(req.params.id);
         if (!accessory) {
             return res.status(StatusCodes.NOT_FOUND).json({ message: "Accessory not found" });
         }
-        res.status(StatusCodes.OK).json({ accessory }); // Ensure this includes all fields
+        res.status(StatusCodes.OK).json({ accessory });
     } catch (error) {
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error retrieving accessory", error: error.message });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            message: "Error retrieving accessory",
+            error: error.message,
+        });
     }
 };
 
 
-// Update accessory by ID (with image handling)
+// Update accessory by ID
 export const updateAccessory = async (req, res) => {
     try {
         const { id } = req.params;
@@ -133,22 +178,27 @@ export const updateAccessory = async (req, res) => {
             return res.status(StatusCodes.NOT_FOUND).json({ message: "Accessory not found" });
         }
 
-        // Combine or replace images
-        const baseUrl = `${req.protocol}://${req.get("host")}`;
-        const newImages = req.files?.map((file) => `${baseUrl}/uploads/${file.filename}`) || [];
+        // Handle image updates
+        if (req.files) {
+            const newImages = [];
+            for (const file of req.files) {
+                const image = await uploadImageToCloudinary(file);
+                newImages.push(image);
+            }
 
-        if (replaceImages === 'true') {
-            // Replace existing images
-            accessory.images = newImages;
-        } else {
-            // Append new images
-            accessory.images = [...accessory.images, ...newImages];
-        }
+            if (replaceImages === "true") {
+                // Delete old images from Cloudinary
+                const imageDeletions = accessory.images.map((image) =>
+                    cloudinary.uploader.destroy(image.public_id)
+                );
+                await Promise.all(imageDeletions);
 
-        // Update the image order if provided
-        if (imageOrder) {
-            const order = JSON.parse(imageOrder);
-            accessory.images = order.map(index => accessory.images[index]);
+                // Replace with new images
+                accessory.images = newImages;
+            } else {
+                // Append new images
+                accessory.images = [...accessory.images, ...newImages];
+            }
         }
 
         // Update the accessory details
@@ -222,15 +272,3 @@ export const updateAccessoryInventory = async (req, res) => {
     }
 };
 
-// Delete accessory by ID
-export const deleteAccessory = async (req, res) => {
-    try {
-        const accessory = await Accessory.findByIdAndDelete(req.params.id);
-        if (!accessory) {
-            return res.status(StatusCodes.NOT_FOUND).json({ message: "Accessory not found" });
-        }
-        res.status(StatusCodes.OK).json({ message: "Accessory deleted successfully" });
-    } catch (error) {
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error deleting accessory", error: error.message });
-    }
-};
