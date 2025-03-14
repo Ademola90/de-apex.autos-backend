@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoutes.js";
 import superAdminRoutes from './routes/superadmin.route.js';
 import carManagementRoutes from "./routes/carManagement.route.js";
 import accessoryManagementRoutes from "./routes/accessoryManagement.route.js";
+import carHireRoute from "./routes/carHireRoute.js";
 import path from "path";
 import googleRoutes from "./routes/googleRoutes.js";
 
@@ -68,6 +69,7 @@ app.use("/api/users", userRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/car', carManagementRoutes);
 app.use('/api/accessory', accessoryManagementRoutes);
+app.use('/api/car-hire', carHireRoute);
 
 // Connect to MongoDB
 mongoose

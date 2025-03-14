@@ -107,47 +107,6 @@ export const getAccessories = async (req, res) => {
     }
 };
 
-// export const addAccessory = async (req, res) => {
-//     try {
-//         const { name, description, price, category, make, stock } = req.body;
-
-//         if (!name || !description || !price || !category || !make || stock === undefined) {
-//             return res.status(StatusCodes.BAD_REQUEST).json({ message: "All fields are required" });
-//         }
-
-//         // Validate files and create URLs
-//         const baseUrl = `${req.protocol}://${req.get("host")}`;
-//         const images = req.files?.map((file) => `${baseUrl}/uploads/${file.filename}`) || [];
-
-//         if (images.length === 0) {
-//             return res.status(StatusCodes.BAD_REQUEST).json({ message: "At least one image is required" });
-//         }
-
-//         const newAccessory = new Accessory({
-//             name,
-//             description,
-//             price,
-//             category,
-//             make,
-//             stock,
-//             images,
-//             createdBy: req.user.userId,
-//         });
-
-//         await newAccessory.save();
-
-//         res.status(StatusCodes.CREATED).json({
-//             message: "Accessory added successfully",
-//             accessory: newAccessory,
-//         });
-//     } catch (error) {
-//         console.error("Error adding accessory:", error);
-//         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//             message: "Error adding accessory",
-//             error: error.message,
-//         });
-//     }
-// };
 
 
 // Get accessory by ID
