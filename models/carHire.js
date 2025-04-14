@@ -14,7 +14,7 @@ const carHireSchema = new mongoose.Schema(
         },
         price: {
             type: Number,
-            required: [true, "Price per day is required"],
+            required: [true, "Price per kilometer is required"],
         },
         seats: {
             type: Number,

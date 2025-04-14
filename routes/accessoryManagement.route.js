@@ -33,6 +33,7 @@ function multerErrorHandler(err, req, res, next) {
 // Add a new accessory
 router.post(
     "/accessories",
+    authenticateJWT,
     authorizeRoles("admin", "superadmin"),
     upload.array("images", 10),
     addAccessory
