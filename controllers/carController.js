@@ -129,37 +129,50 @@ export const getCarById = async (req, res) => {
 export const updateCar = async (req, res) => {
     try {
         const { id } = req.params;
-        const { make, model, year, type, price, description, replaceImages, imageOrder } = req.body;
+        const { make, model, year, type, price, description, replaceImages } = req.body;
 
         const car = await Car.findById(id);
-        if (!car) {
-            return res.status(StatusCodes.NOT_FOUND).json({ message: "Car not found" });
+        if (!car) return res.status(404).json({ message: "Car not found" });
+
+        // Process existing image order
+        let orderedExisting = [];
+        if (req.body.existingImages) {
+            const existingImagesOrder = JSON.parse(req.body.existingImages);
+            const publicIds = existingImagesOrder.map((img) => img.public_id);
+            orderedExisting = publicIds.map((id) =>
+                car.images.find((img) => img.public_id === id)
+            ).filter((img) => img);
         }
 
-        // Handle image updates
+        // Process new images
+        let newImages = [];
         if (req.files) {
-            const newImages = [];
-            for (const file of req.files) {
-                const image = await uploadImageToCloudinary(file);
-                newImages.push(image);
-            }
-
-            if (replaceImages === "true") {
-                // Delete old images from Cloudinary
-                const imageDeletions = car.images.map((image) =>
-                    cloudinary.uploader.destroy(image.public_id)
-                );
-                await Promise.all(imageDeletions);
-
-                // Replace with new images
-                car.images = newImages;
-            } else {
-                // Append new images
-                car.images = [...car.images, ...newImages];
-            }
+            newImages = await Promise.all(
+                req.files.map(async (file) => {
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        folder: "uploads",
+                        resource_type: "auto",
+                    });
+                    return {
+                        public_id: result.public_id,
+                        secure_url: result.secure_url,
+                    };
+                })
+            );
         }
 
-        // Update the car details
+        // Replace or merge images
+        if (replaceImages === "true") {
+            // Delete old images from Cloudinary
+            await Promise.all(
+                car.images.map((img) => cloudinary.uploader.destroy(img.public_id))
+            );
+            car.images = [...orderedExisting, ...newImages];
+        } else {
+            car.images = [...orderedExisting, ...newImages];
+        }
+
+        // Update car details
         car.make = make || car.make;
         car.model = model || car.model;
         car.year = year || car.year;
@@ -169,13 +182,13 @@ export const updateCar = async (req, res) => {
 
         const updatedCar = await car.save();
 
-        res.status(StatusCodes.OK).json({
+        res.status(200).json({
             message: "Car updated successfully",
             car: updatedCar,
         });
     } catch (error) {
         console.error("Error updating car:", error);
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        res.status(500).json({
             message: "Error updating car",
             error: error.message,
         });

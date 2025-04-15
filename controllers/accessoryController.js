@@ -130,37 +130,54 @@ export const getAccessoryById = async (req, res) => {
 export const updateAccessory = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, price, category, make, stock, replaceImages, imageOrder } = req.body;
+        const { name, description, price, category, make, stock, replaceImages } = req.body;
 
         const accessory = await Accessory.findById(id);
         if (!accessory) {
             return res.status(StatusCodes.NOT_FOUND).json({ message: "Accessory not found" });
         }
 
-        // Handle image updates
-        if (req.files) {
-            const newImages = [];
-            for (const file of req.files) {
-                const image = await uploadImageToCloudinary(file);
-                newImages.push(image);
-            }
-
-            if (replaceImages === "true") {
-                // Delete old images from Cloudinary
-                const imageDeletions = accessory.images.map((image) =>
-                    cloudinary.uploader.destroy(image.public_id)
-                );
-                await Promise.all(imageDeletions);
-
-                // Replace with new images
-                accessory.images = newImages;
-            } else {
-                // Append new images
-                accessory.images = [...accessory.images, ...newImages];
-            }
+        // Process existing images from JSON string
+        let orderedExisting = [];
+        if (req.body.existingImages) {
+            const existingImagesOrder = JSON.parse(req.body.existingImages);
+            const publicIds = existingImagesOrder.map(img => img.public_id);
+            orderedExisting = publicIds.map(id =>
+                accessory.images.find(img => img.public_id === id)
+            ).filter(img => img);
         }
 
-        // Update the accessory details
+        // Process new images
+        let newImages = [];
+        if (req.files) {
+            newImages = await Promise.all(
+                req.files.map(async (file) => {
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        folder: "uploads",
+                        resource_type: "auto",
+                    });
+                    return {
+                        public_id: result.public_id,
+                        secure_url: result.secure_url,
+                    };
+                })
+            );
+        }
+
+        // Handle image replacement/merging
+        if (replaceImages === "true") {
+            // Delete old images
+            await Promise.all(
+                accessory.images.map(img =>
+                    cloudinary.uploader.destroy(img.public_id)
+                )
+            );
+            accessory.images = [...orderedExisting, ...newImages];
+        } else {
+            accessory.images = [...orderedExisting, ...newImages];
+        }
+
+        // Update other fields
         accessory.name = name || accessory.name;
         accessory.description = description || accessory.description;
         accessory.price = price || accessory.price;
@@ -168,7 +185,7 @@ export const updateAccessory = async (req, res) => {
         accessory.make = make || accessory.make;
         accessory.stock = stock || accessory.stock;
 
-        // Update status based on stock
+        // Update status
         if (accessory.stock > 10) {
             accessory.status = "In Stock";
         } else if (accessory.stock > 0) {
